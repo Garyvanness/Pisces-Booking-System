@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>发廊专属预约系统 - Firebase实时云端版</title>
     <!-- Firebase Compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -90,7 +90,6 @@
             overflow-x: auto;
             overflow-y: auto;
             height: calc(100vh - 80px);
-            -webkit-overflow-scrolling: touch;
         }
         table {
             width: 100%;
@@ -120,8 +119,7 @@
         th:hover {
             background-color: #f1f3f5;
         }
-        /* 恢复完美的左右上下双重固定锁定 */
-        td:first-child {
+        td:first-child, th:first-child {
             position: sticky;
             left: 0;
             background-color: #f1f3f5;
@@ -134,17 +132,8 @@
             white-space: nowrap;
         }
         th:first-child {
-            position: sticky;
-            left: 0;
-            top: 0;
-            z-index: 4;
-            background-color: #f1f3f5;
+            z-index: 3;
             cursor: default;
-            width: 60px;
-            min-width: 60px;
-            font-size: 12px;
-            padding: 12px 2px;
-            white-space: nowrap;
         }
         td {
             background-color: #fff;
@@ -231,6 +220,9 @@
     <div id="saveIndicator" class="save-indicator">已自动同步云端</div>
 
     <script>
+        // ====================================================
+        // 请在此处保留你自己的 Firebase 配置信息
+        // ====================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCSvU7E7oAHdgnXfqf4t-WRS6xYgdkr0I",
             authDomain: "pisces-appointment-system.firebaseapp.com",
@@ -523,8 +515,7 @@
             thead.innerHTML = '';
             let trHead = document.createElement('tr');
             
-            let thTime = document.getElementById('thTime') || document.createElement('th');
-            thTime.id = 'thTime';
+            let thTime = document.createElement('th');
             thTime.innerText = t.timeCol;
             trHead.appendChild(thTime);
             
