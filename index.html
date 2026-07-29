@@ -90,6 +90,7 @@
             overflow-x: auto;
             overflow-y: auto;
             height: calc(100vh - 80px);
+            -webkit-overflow-scrolling: touch;
         }
         table {
             width: 100%;
@@ -119,7 +120,7 @@
         th:hover {
             background-color: #f1f3f5;
         }
-        td:first-child, th:first-child {
+        td:first-child {
             position: sticky;
             left: 0;
             background-color: #f1f3f5;
@@ -132,8 +133,17 @@
             white-space: nowrap;
         }
         th:first-child {
-            z-index: 3;
+            position: sticky;
+            left: 0;
+            top: 0;
+            z-index: 4;
+            background-color: #f1f3f5;
             cursor: default;
+            width: 60px;
+            min-width: 60px;
+            font-size: 12px;
+            padding: 12px 2px;
+            white-space: nowrap;
         }
         td {
             background-color: #fff;
@@ -220,9 +230,6 @@
     <div id="saveIndicator" class="save-indicator">已自动同步云端</div>
 
     <script>
-        // ====================================================
-        // 请在此处保留你自己的 Firebase 配置信息
-        // ====================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCSvU7E7oAHdgnXfqf4t-WRS6xYgdkr0I",
             authDomain: "pisces-appointment-system.firebaseapp.com",
@@ -318,7 +325,7 @@
         let defaultStaffs = ["Gary", "Elvin", "Winnie", "Aries", "Yuna", "Walk In"];
         let staffs = defaultStaffs;
         let currentDate = new Date().toISOString().split('T')[0];
-        let showLateHours = false;
+        let showLateHours = false; // 默认折叠
         let currentListener = null;
         let leaveStatusData = {};
         let cachedAppointments = {};
@@ -360,12 +367,15 @@
             currentDate = date.toISOString().split('T')[0];
             document.getElementById('datePicker').value = currentDate;
             updateDayOfWeek();
+            // 切换日期时，重置折叠状态为默认（后续会根据该天是否有数据自动判断）
+            showLateHours = false;
             bindRealtimeData();
         }
 
         function loadDate() {
             currentDate = document.getElementById('datePicker').value;
             updateDayOfWeek();
+            showLateHours = false;
             bindRealtimeData();
         }
 
@@ -410,6 +420,24 @@
                 const dayData = snapshot.val() || {};
                 leaveStatusData = dayData.leaves || {};
                 cachedAppointments = dayData.appointments || {};
+
+                // 核心检测：检查晚间时段（lateTimes）有没有任何一个格子有内容
+                let hasLateAppointment = false;
+                staffs.forEach(staff => {
+                    const safeStaff = sanitizeKey(staff);
+                    lateTimes.forEach(time => {
+                        const safeTime = sanitizeKey(time);
+                        const val = cachedAppointments[`${safeTime}_${safeStaff}`];
+                        if (val && val.trim() !== "") {
+                            hasLateAppointment = true;
+                        }
+                    });
+                });
+
+                // 如果晚间有内容，自动展开；如果没有，保持折叠（除非用户手动点过）
+                if (hasLateAppointment) {
+                    showLateHours = true;
+                }
 
                 renderTable();
 
@@ -559,6 +587,7 @@
             
             lateTimes.forEach(time => {
                 let tr = createTimeRow(time, true);
+                // 根据检测结果或用户点击决定是否展开
                 tr.style.display = showLateHours ? 'table-row' : 'none';
                 tbody.appendChild(tr);
             });
