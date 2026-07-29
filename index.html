@@ -134,6 +134,8 @@
             z-index: 3;
             background-color: #f1f3f5;
             cursor: default;
+            width: 65px;
+            min-width: 65px;
         }
         td {
             background-color: #fff;
@@ -256,7 +258,9 @@
                 staffPrompt: "请输入理发师名字（请用逗号 , 分开）：",
                 days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
                 placeholder: "点击输入",
-                leaveStatus: " [休假]"
+                leaveStatus: " [休假]",
+                confirmLeave: "确定要将 【{name}】 设为休假吗？这会清空该员工当天的所有预约格子！",
+                confirmNormal: "确定要将 【{name}】 恢复为正常上班吗？"
             },
             en: {
                 docTitle: "Salon Appointment System",
@@ -270,7 +274,9 @@
                 staffPrompt: "Enter staff names (separated by commas ,):",
                 days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
                 placeholder: "Tap to type",
-                leaveStatus: " [OFF]"
+                leaveStatus: " [OFF]",
+                confirmLeave: "Set {name} to ON LEAVE? This will clear all appointments for this staff today.",
+                confirmNormal: "Restore {name} to NORMAL working status?"
             },
             ms: {
                 docTitle: "Sistem Temujanji Salun",
@@ -284,7 +290,9 @@
                 staffPrompt: "Masukkan nama staf (pisahkan dengan koma ,):",
                 days: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
                 placeholder: "Tekan & Taip",
-                leaveStatus: " [Cuti]"
+                leaveStatus: " [Cuti]",
+                confirmLeave: "Set {name} kepada CUTI? Ini akan mengosongkan jadual hari ini.",
+                confirmNormal: "Pulihkan {name} kepada bekerja normal?"
             }
         };
 
@@ -314,7 +322,7 @@
         let currentDate = new Date().toISOString().split('T')[0];
         let showLateHours = false;
         let currentListener = null;
-        let leaveStatusData = {}; // 存储当前日期各员工的休假状态
+        let leaveStatusData = {};
 
         function init() {
             document.title = t.docTitle;
@@ -389,7 +397,6 @@
             return key.replace(/[\.\#\$\[\]\/]/g, "_");
         }
 
-        // 统一监听当前日期的预约数据及休假状态
         function bindRealtimeData() {
             if (!db) {
                 renderTable();
@@ -407,7 +414,6 @@
 
                 renderTable();
 
-                // 填充预约数据
                 staffs.forEach(staff => {
                     const safeStaff = sanitizeKey(staff);
                     [...regularTimes, ...lateTimes].forEach(time => {
@@ -422,15 +428,22 @@
             });
         }
 
-        // 切换某个员工的休假状态
         function toggleStaffLeave(staff) {
             const safeStaff = sanitizeKey(staff);
             const currentStatus = leaveStatusData[safeStaff] || false;
+            
+            // 弹出防误触确认框
+            let msg = currentStatus ? t.confirmNormal : t.confirmLeave;
+            msg = msg.replace("{name}", staff);
+            
+            if (!confirm(msg)) {
+                return; // 如果用户点取消，直接退出，什么都不做
+            }
+
             const newStatus = !currentStatus;
 
             if (db) {
                 db.ref(`data/${currentDate}/leaves/${safeStaff}`).set(newStatus);
-                // 如果设为休假，同时清空该员工当天的所有预约
                 if (newStatus) {
                     db.ref(`data/${currentDate}/appointments`).transaction((currentAppts) => {
                         if (!currentAppts) return currentAppts;
@@ -450,7 +463,6 @@
 
         function saveAppointment(time, staff, value) {
             const safeStaff = sanitizeKey(staff);
-            // 如果该员工当天在休假，直接拦截不给保存
             if (leaveStatusData[safeStaff]) return;
 
             const safeTime = sanitizeKey(time);
@@ -493,7 +505,7 @@
                 if (isOnLeave) {
                     td.className = "on-leave-cell";
                     td.contentEditable = "false";
-                    td.innerText = ""; // 休假期间清空内容
+                    td.innerText = "";
                 } else {
                     td.contentEditable = "true";
                     td.setAttribute("data-placeholder", t.placeholder);
@@ -529,7 +541,6 @@
                     th.innerText = staff;
                 }
 
-                // 点击表头名字直接切换休假状态
                 th.onclick = function() {
                     toggleStaffLeave(staff);
                 };
