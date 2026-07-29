@@ -25,7 +25,7 @@
         .header {
             background-color: var(--primary-color);
             color: white;
-            padding: 15px 10px;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -35,6 +35,13 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             flex-wrap: wrap;
             gap: 10px;
+        }
+        .brand-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f1c40f;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
         }
         .header-controls {
             display: flex;
@@ -210,6 +217,8 @@
 
     <div class="header">
         <button class="btn-settings" id="btnEditStaff" onclick="editStaff()">⚙️ 更改理发师</button>
+        <!-- 在这里添加了标题，你可以随时在代码里修改文字 -->
+        <div class="brand-title">PISCES APPOINTMENT</div>
         <div class="header-controls">
             <button id="btnPrevDay" onclick="changeDate(-1)">◀ 前一天</button>
             <div class="date-picker-container">
@@ -325,7 +334,7 @@
         let defaultStaffs = ["Gary", "Elvin", "Winnie", "Aries", "Yuna", "Walk In"];
         let staffs = defaultStaffs;
         let currentDate = new Date().toISOString().split('T')[0];
-        let showLateHours = false; // 默认折叠
+        let showLateHours = false;
         let currentListener = null;
         let leaveStatusData = {};
         let cachedAppointments = {};
@@ -367,7 +376,6 @@
             currentDate = date.toISOString().split('T')[0];
             document.getElementById('datePicker').value = currentDate;
             updateDayOfWeek();
-            // 切换日期时，重置折叠状态为默认（后续会根据该天是否有数据自动判断）
             showLateHours = false;
             bindRealtimeData();
         }
@@ -421,7 +429,6 @@
                 leaveStatusData = dayData.leaves || {};
                 cachedAppointments = dayData.appointments || {};
 
-                // 核心检测：检查晚间时段（lateTimes）有没有任何一个格子有内容
                 let hasLateAppointment = false;
                 staffs.forEach(staff => {
                     const safeStaff = sanitizeKey(staff);
@@ -434,7 +441,6 @@
                     });
                 });
 
-                // 如果晚间有内容，自动展开；如果没有，保持折叠（除非用户手动点过）
                 if (hasLateAppointment) {
                     showLateHours = true;
                 }
@@ -576,7 +582,7 @@
             });
             
             let trToggle = document.createElement('tr');
-            trToggle.className = 'toggle-row';
+            trToggle.className, trToggle.className = 'toggle-row';
             let tdToggle = document.createElement('td');
             tdToggle.colSpan = staffs.length + 1;
             tdToggle.id = 'toggleLateBtn';
@@ -587,7 +593,6 @@
             
             lateTimes.forEach(time => {
                 let tr = createTimeRow(time, true);
-                // 根据检测结果或用户点击决定是否展开
                 tr.style.display = showLateHours ? 'table-row' : 'none';
                 tbody.appendChild(tr);
             });
