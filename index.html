@@ -15,20 +15,20 @@
             --accent-color: #d35400;
             --night-color: #34495e;
         }
-        /* 核心修复：彻底锁死网页外层，禁止全局回弹，变成 App 模式 */
+        /* 锁死网页外层，禁止全局回弹，变成 App 模式 */
         html, body {
             height: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* 锁死背景 */
-            overscroll-behavior: none; /* 禁用苹果/安卓的全局橡皮筋效果 */
+            overflow: hidden; 
+            overscroll-behavior: none; 
             background-color: var(--bg-color);
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #333;
             display: flex;
-            flex-direction: column; /* 采用上下弹性布局 */
+            flex-direction: column; 
         }
         .header {
             background-color: var(--primary-color);
@@ -41,7 +41,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             flex-wrap: wrap;
             gap: 10px;
-            flex-shrink: 0; /* 保证顶栏高度绝不被挤压 */
+            flex-shrink: 0; 
         }
         .brand-container {
             display: flex;
@@ -49,8 +49,8 @@
             gap: 10px;
         }
         .brand-logo {
-            height: 55px;
-            max-width: 200px;
+            height: 55px; /* 保留你的 55px 专属设置 */
+            max-width: 200px; /* 保留你的 200px 专属设置 */
             object-fit: contain;
         }
         .header-controls {
@@ -104,13 +104,18 @@
             white-space: nowrap;
         }
         
-        /* 核心修复：让表格容器接管所有滚动，精准控制 */
         .table-wrapper {
-            flex-grow: 1; /* 自动填满顶栏下方所有空间 */
+            flex-grow: 1; 
             overflow-x: auto;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch; /* 保持内部丝滑滚动 */
-            overscroll-behavior: contain; /* 回弹仅限表格内部，不波及外层 */
+            -webkit-overflow-scrolling: touch; 
+            overscroll-behavior: contain; 
+        }
+
+        /* 动画专用外壳，确保滑动时不影响表格内的锁定布局 */
+        #animationWrapper {
+            width: 100%;
+            will-change: transform, opacity;
         }
         
         table {
@@ -235,6 +240,39 @@
             pointer-events: none;
             z-index: 100;
         }
+
+        /* 切换过渡动画 Keyframes */
+        .slide-out-left { animation: slideOutLeft 0.15s forwards ease-in; }
+        .slide-out-right { animation: slideOutRight 0.15s forwards ease-in; }
+        .slide-in-right { animation: slideInRight 0.15s forwards ease-out; }
+        .slide-in-left { animation: slideInLeft 0.15s forwards ease-out; }
+        .fade-out { animation: fadeOut 0.15s forwards ease-in; }
+        .fade-in { animation: fadeIn 0.15s forwards ease-out; }
+
+        @keyframes slideOutLeft {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(-30px); opacity: 0; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(30px); opacity: 0; }
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -257,15 +295,18 @@
     </div>
 
     <div class="table-wrapper">
-        <table id="scheduleTable">
-            <thead id="tableHead"></thead>
-            <tbody id="tableBody"></tbody>
-            <tfoot id="tableFoot">
-                <tr>
-                    <td id="footerCell" class="table-footer-cell">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</td>
-                </tr>
-            </tfoot>
-        </table>
+        <!-- 动画包裹层 -->
+        <div id="animationWrapper">
+            <table id="scheduleTable">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+                <tfoot id="tableFoot">
+                    <tr>
+                        <td id="footerCell" class="table-footer-cell">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 
     <div id="saveIndicator" class="save-indicator">已实时同步云端</div>
@@ -365,11 +406,14 @@
         
         let defaultStaffs = ["Gary", "Elvin", "Winnie", "Aries", "Yuna", "Walk In"];
         let staffs = defaultStaffs;
-        let localDate = new Date();
-        let localYear = localDate.getFullYear();
-        let localMonth = String(localDate.getMonth() + 1).padStart(2, '0');
-        let localDay = String(localDate.getDate()).padStart(2, '0');
+        
+        // 你的本地日期获取逻辑（完美修复半夜显示昨天的问题）
+        let localDateObj = new Date();
+        let localYear = localDateObj.getFullYear();
+        let localMonth = String(localDateObj.getMonth() + 1).padStart(2, '0');
+        let localDay = String(localDateObj.getDate()).padStart(2, '0');
         let currentDate = `${localYear}-${localMonth}-${localDay}`;
+
         let showLateHours = false;
         let currentListener = null;
         let leaveStatusData = {};
@@ -407,20 +451,55 @@
         }
 
         function changeDate(days) {
-            let date = new Date(document.getElementById('datePicker').value);
-            date.setDate(date.getDate() + days);
-            currentDate = date.toISOString().split('T')[0];
-            document.getElementById('datePicker').value = currentDate;
-            updateDayOfWeek();
-            showLateHours = false;
-            bindRealtimeData();
+            const animWrapper = document.getElementById('animationWrapper');
+            
+            // 1. 播放滑出动画
+            animWrapper.className = days > 0 ? 'slide-out-left' : 'slide-out-right';
+            
+            // 2. 等待动画结束(150ms)后，更新日期和数据
+            setTimeout(() => {
+                let [y, m, d] = document.getElementById('datePicker').value.split('-');
+                let dateObj = new Date(y, m - 1, d);
+                dateObj.setDate(dateObj.getDate() + days);
+                
+                // 本地计算防止时区错乱
+                let nextYear = dateObj.getFullYear();
+                let nextMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+                let nextDay = String(dateObj.getDate()).padStart(2, '0');
+                currentDate = `${nextYear}-${nextMonth}-${nextDay}`;
+                
+                document.getElementById('datePicker').value = currentDate;
+                updateDayOfWeek();
+                showLateHours = false;
+                bindRealtimeData();
+
+                // 3. 播放新数据的滑入动画
+                animWrapper.className = days > 0 ? 'slide-in-right' : 'slide-in-left';
+
+                // 4. 清除动画样式
+                setTimeout(() => {
+                    animWrapper.className = '';
+                }, 150);
+            }, 150);
         }
 
         function loadDate() {
-            currentDate = document.getElementById('datePicker').value;
-            updateDayOfWeek();
-            showLateHours = false;
-            bindRealtimeData();
+            const animWrapper = document.getElementById('animationWrapper');
+            
+            // 手动选择日期时使用淡入淡出更柔和
+            animWrapper.className = 'fade-out';
+            
+            setTimeout(() => {
+                currentDate = document.getElementById('datePicker').value;
+                updateDayOfWeek();
+                showLateHours = false;
+                bindRealtimeData();
+                
+                animWrapper.className = 'fade-in';
+                setTimeout(() => {
+                    animWrapper.className = '';
+                }, 150);
+            }, 150);
         }
 
         function showSaveIndicator() {
