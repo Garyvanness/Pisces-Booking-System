@@ -116,7 +116,6 @@
             vertical-align: top;
             min-width: 100px;
         }
-        /* 完美吸顶锁定：无论怎么上下滚动，名字永远在最顶部 */
         th {
             background-color: #fff;
             color: var(--primary-color);
@@ -131,7 +130,18 @@
         th:hover {
             background-color: #f1f3f5;
         }
-        /* 左上角时间/理发师交叉格：兼顾上下和左右双重锁定 */
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #f1f3f5;
+            font-weight: bold;
+            z-index: 5;
+            width: 60px;
+            min-width: 60px;
+            font-size: 12px;
+            padding: 12px 2px;
+            white-space: nowrap;
+        }
         th:first-child {
             position: sticky;
             left: 0;
@@ -139,18 +149,6 @@
             z-index: 12;
             background-color: #f1f3f5;
             cursor: default;
-            width: 60px;
-            min-width: 60px;
-            font-size: 12px;
-            padding: 12px 2px;
-            white-space: nowrap;
-        }
-        td:first-child {
-            position: sticky;
-            left: 0;
-            background-color: #f1f3f5;
-            font-weight: bold;
-            z-index: 5;
             width: 60px;
             min-width: 60px;
             font-size: 12px;
@@ -202,15 +200,16 @@
             display: none;
             background-color: #fafbfc;
         }
-        .table-footer-bar {
-            background-color: var(--primary-color);
-            color: rgba(255,255,255,0.7);
-            text-align: center;
-            padding: 15px;
-            font-size: 12px;
-            letter-spacing: 1px;
-            min-width: 600px;
-            width: 100%;
+        /* 将蓝条嵌入表格底部，保证表头永远不掉落 */
+        .table-footer-cell {
+            background-color: var(--primary-color) !important;
+            color: rgba(255,255,255,0.7) !important;
+            text-align: center !important;
+            padding: 15px !important;
+            font-size: 12px !important;
+            letter-spacing: 1px !important;
+            border: none !important;
+            position: static !important; /* 解除左侧时间锁定，自然铺满 */
         }
         .save-indicator {
             position: fixed;
@@ -251,8 +250,13 @@
         <table id="scheduleTable">
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
+            <!-- 用 tfoot 将底部蓝条完全融入表格内部 -->
+            <tfoot id="tableFoot">
+                <tr>
+                    <td id="footerCell" class="table-footer-cell">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</td>
+                </tr>
+            </tfoot>
         </table>
-        <div class="table-footer-bar">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</div>
     </div>
 
     <div id="saveIndicator" class="save-indicator">已实时同步云端</div>
@@ -615,6 +619,12 @@
                 tr.style.display = showLateHours ? 'table-row' : 'none';
                 tbody.appendChild(tr);
             });
+
+            // 让底部的蓝条长度自动跟着员工数量改变，完美铺满整个表格
+            const footerCell = document.getElementById('footerCell');
+            if (footerCell) {
+                footerCell.colSpan = staffs.length + 1;
+            }
         }
 
         window.onload = init;
