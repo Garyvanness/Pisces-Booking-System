@@ -42,8 +42,8 @@
             gap: 10px;
         }
         .brand-logo {
-            height: 55px; /* 完美适配顶栏的高度 */
-            max-width: 200px;
+            height: 48px;
+            max-width: 160px;
             object-fit: contain;
         }
         .header-controls {
@@ -99,7 +99,7 @@
         .table-wrapper {
             overflow-x: auto;
             overflow-y: auto;
-            height: calc(100vh - 80px);
+            height: calc(100vh - 75px);
             -webkit-overflow-scrolling: touch;
         }
         table {
@@ -200,6 +200,15 @@
             display: none;
             background-color: #fafbfc;
         }
+        /* 表格底部的美观收尾深蓝色条 */
+        .table-footer-bar {
+            background-color: var(--primary-color);
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
         .save-indicator {
             position: fixed;
             bottom: 20px;
@@ -221,7 +230,6 @@
     <div class="header">
         <button class="btn-settings" id="btnEditStaff" onclick="editStaff()">⚙️ 更改理发师</button>
         
-        <!-- Logo 区域 -->
         <div class="brand-container">
             <img src="logo.png" alt="PISCES HAIR STUDIO" class="brand-logo" onerror="this.style.display='none'">
         </div>
@@ -241,9 +249,11 @@
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
         </table>
+        <!-- 底部深蓝色收尾条 -->
+        <div class="table-footer-bar">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</div>
     </div>
 
-    <div id="saveIndicator" class="save-indicator">已自动同步云端</div>
+    <div id="saveIndicator" class="save-indicator">已实时同步云端</div>
 
     <script>
         const firebaseConfig = {
