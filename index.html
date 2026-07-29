@@ -365,7 +365,11 @@
         
         let defaultStaffs = ["Gary", "Elvin", "Winnie", "Aries", "Yuna", "Walk In"];
         let staffs = defaultStaffs;
-        let currentDate = new Date().toISOString().split('T')[0];
+        let localDate = new Date();
+        let localYear = localDate.getFullYear();
+        let localMonth = String(localDate.getMonth() + 1).padStart(2, '0');
+        let localDay = String(localDate.getDate()).padStart(2, '0');
+        let currentDate = `${localYear}-${localMonth}-${localDay}`;
         let showLateHours = false;
         let currentListener = null;
         let leaveStatusData = {};
