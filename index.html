@@ -259,7 +259,7 @@
                 days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
                 placeholder: "点击输入",
                 leaveStatus: " [休假]",
-                confirmLeave: "确定要将 【{name}】 设为休假吗？这会清空该员工当天的所有预约格子！",
+                confirmLeave: "确定要将 【{name}】 设为休假吗？（原有内容会保留）",
                 confirmNormal: "确定要将 【{name}】 恢复为正常上班吗？"
             },
             en: {
@@ -275,7 +275,7 @@
                 days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
                 placeholder: "Tap to type",
                 leaveStatus: " [OFF]",
-                confirmLeave: "Set {name} to ON LEAVE? This will clear all appointments for this staff today.",
+                confirmLeave: "Set {name} to ON LEAVE? (Existing appointments will be kept)",
                 confirmNormal: "Restore {name} to NORMAL working status?"
             },
             ms: {
@@ -291,7 +291,7 @@
                 days: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
                 placeholder: "Tekan & Taip",
                 leaveStatus: " [Cuti]",
-                confirmLeave: "Set {name} kepada CUTI? Ini akan mengosongkan jadual hari ini.",
+                confirmLeave: "Set {name} kepada CUTI? (Kandungan sedia ada akan disimpan)",
                 confirmNormal: "Pulihkan {name} kepada bekerja normal?"
             }
         };
@@ -323,6 +323,7 @@
         let showLateHours = false;
         let currentListener = null;
         let leaveStatusData = {};
+        let cachedAppointments = {}; // 本地暂存预约数据
 
         function init() {
             document.title = t.docTitle;
@@ -410,7 +411,7 @@
             currentListener = db.ref('data/' + currentDate).on('value', (snapshot) => {
                 const dayData = snapshot.val() || {};
                 leaveStatusData = dayData.leaves || {};
-                const appointments = dayData.appointments || {};
+                cachedAppointments = dayData.appointments || {};
 
                 renderTable();
 
@@ -421,7 +422,7 @@
                         const cellId = `cell_${safeTime}_${safeStaff}`;
                         const cell = document.getElementById(cellId);
                         if (cell && document.activeElement !== cell) {
-                            cell.innerText = appointments[`${safeTime}_${safeStaff}`] || '';
+                            cell.innerText = cachedAppointments[`${safeTime}_${safeStaff}`] || '';
                         }
                     });
                 });
@@ -432,28 +433,18 @@
             const safeStaff = sanitizeKey(staff);
             const currentStatus = leaveStatusData[safeStaff] || false;
             
-            // 弹出防误触确认框
             let msg = currentStatus ? t.confirmNormal : t.confirmLeave;
             msg = msg.replace("{name}", staff);
             
             if (!confirm(msg)) {
-                return; // 如果用户点取消，直接退出，什么都不做
+                return;
             }
 
             const newStatus = !currentStatus;
 
             if (db) {
+                // 仅改变休假状态，完全不碰 appointments，内容完美保留
                 db.ref(`data/${currentDate}/leaves/${safeStaff}`).set(newStatus);
-                if (newStatus) {
-                    db.ref(`data/${currentDate}/appointments`).transaction((currentAppts) => {
-                        if (!currentAppts) return currentAppts;
-                        [...regularTimes, ...lateTimes].forEach(time => {
-                            const safeTime = sanitizeKey(time);
-                            delete currentAppts[`${safeTime}_${safeStaff}`];
-                        });
-                        return currentAppts;
-                    });
-                }
             } else {
                 leaveStatusData[safeStaff] = newStatus;
                 renderTable();
@@ -505,10 +496,13 @@
                 if (isOnLeave) {
                     td.className = "on-leave-cell";
                     td.contentEditable = "false";
-                    td.innerText = "";
+                    // 即使在休假状态下，也把原有的预约文字塞进去显示（灰显/只读状态）
+                    td.innerText = cachedAppointments[`${safeTime}_${safeStaff}`] || '';
                 } else {
+                    td.className = "";
                     td.contentEditable = "true";
                     td.setAttribute("data-placeholder", t.placeholder);
+                    td.innerText = cachedAppointments[`${safeTime}_${safeStaff}`] || '';
                 }
                 
                 td.onblur = function() {
@@ -538,6 +532,7 @@
                     th.className = "on-leave-header";
                     th.innerText = staff + t.leaveStatus;
                 } else {
+                    th.className = "";
                     th.innerText = staff;
                 }
 
