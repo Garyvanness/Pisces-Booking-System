@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>发廊专属预约系统 - Firebase实时云端版</title>
+    <title>PISCES HAIR STUDIO - 预约系统</title>
     <!-- Firebase Compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -25,7 +25,7 @@
         .header {
             background-color: var(--primary-color);
             color: white;
-            padding: 12px 15px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -36,12 +36,15 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        .brand-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #f1c40f;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-logo {
+            height: 38px; /* 完美适配顶栏的高度 */
+            max-width: 160px;
+            object-fit: contain;
         }
         .header-controls {
             display: flex;
@@ -217,8 +220,12 @@
 
     <div class="header">
         <button class="btn-settings" id="btnEditStaff" onclick="editStaff()">⚙️ 更改理发师</button>
-        <!-- 在这里添加了标题，你可以随时在代码里修改文字 -->
-        <div class="brand-title">PISCES APPOINTMENT</div>
+        
+        <!-- Logo 区域 -->
+        <div class="brand-container">
+            <img src="logo.png" alt="PISCES HAIR STUDIO" class="brand-logo" onerror="this.style.display='none'">
+        </div>
+
         <div class="header-controls">
             <button id="btnPrevDay" onclick="changeDate(-1)">◀ 前一天</button>
             <div class="date-picker-container">
@@ -261,7 +268,7 @@
 
         const i18n = {
             zh: {
-                docTitle: "发廊专属预约系统",
+                docTitle: "PISCES HAIR STUDIO - 预约系统",
                 editStaff: "⚙️ 更改理发师",
                 prevDay: "◀ 前一天",
                 nextDay: "后一天 ▶",
@@ -277,7 +284,7 @@
                 confirmNormal: "确定要将 【{name}】 恢复为正常上班吗？"
             },
             en: {
-                docTitle: "Salon Appointment System",
+                docTitle: "PISCES HAIR STUDIO - Appointment System",
                 editStaff: "⚙️ Edit Staff",
                 prevDay: "◀ Prev",
                 nextDay: "Next ▶",
@@ -293,7 +300,7 @@
                 confirmNormal: "Restore {name} to NORMAL working status?"
             },
             ms: {
-                docTitle: "Sistem Temujanji Salun",
+                docTitle: "PISCES HAIR STUDIO - Sistem Temujanji",
                 editStaff: "⚙️ Tukar Staf",
                 prevDay: "◀ Sebelum",
                 nextDay: "Seterusnya ▶",
@@ -582,7 +589,7 @@
             });
             
             let trToggle = document.createElement('tr');
-            trToggle.className, trToggle.className = 'toggle-row';
+            trToggle.className = 'toggle-row';
             let tdToggle = document.createElement('td');
             tdToggle.colSpan = staffs.length + 1;
             tdToggle.id = 'toggleLateBtn';
