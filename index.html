@@ -21,10 +21,6 @@
             padding: 0;
             background-color: var(--bg-color);
             color: #333;
-            /* 解决 iOS 无法缩小的问题：整体以 90% 比例舒适呈现，视野更开阔 */
-            transform: scale(0.9);
-            transform-origin: top left;
-            width: 111.1%;
         }
         .header {
             background-color: var(--primary-color);
@@ -94,6 +90,7 @@
             overflow-x: auto;
             overflow-y: auto;
             height: calc(100vh - 80px);
+            -webkit-overflow-scrolling: touch;
         }
         table {
             width: 100%;
@@ -123,7 +120,8 @@
         th:hover {
             background-color: #f1f3f5;
         }
-        td:first-child, th:first-child {
+        /* 恢复完美的左右上下双重固定锁定 */
+        td:first-child {
             position: sticky;
             left: 0;
             background-color: #f1f3f5;
@@ -136,8 +134,17 @@
             white-space: nowrap;
         }
         th:first-child {
-            z-index: 3;
+            position: sticky;
+            left: 0;
+            top: 0;
+            z-index: 4;
+            background-color: #f1f3f5;
             cursor: default;
+            width: 60px;
+            min-width: 60px;
+            font-size: 12px;
+            padding: 12px 2px;
+            white-space: nowrap;
         }
         td {
             background-color: #fff;
@@ -516,7 +523,8 @@
             thead.innerHTML = '';
             let trHead = document.createElement('tr');
             
-            let thTime = document.createElement('th');
+            let thTime = document.getElementById('thTime') || document.createElement('th');
+            thTime.id = 'thTime';
             thTime.innerText = t.timeCol;
             trHead.appendChild(thTime);
             
