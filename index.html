@@ -31,7 +31,7 @@
             align-items: center;
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 20;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             flex-wrap: wrap;
             gap: 10px;
@@ -116,13 +116,14 @@
             vertical-align: top;
             min-width: 100px;
         }
+        /* 完美吸顶锁定：无论怎么上下滚动，名字永远在最顶部 */
         th {
             background-color: #fff;
             color: var(--primary-color);
             font-weight: bold;
             position: sticky;
             top: 0;
-            z-index: 2;
+            z-index: 10;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             cursor: pointer;
             user-select: none;
@@ -130,25 +131,26 @@
         th:hover {
             background-color: #f1f3f5;
         }
-        td:first-child {
+        /* 左上角时间/理发师交叉格：兼顾上下和左右双重锁定 */
+        th:first-child {
             position: sticky;
             left: 0;
+            top: 0;
+            z-index: 12;
             background-color: #f1f3f5;
-            font-weight: bold;
-            z-index: 1;
+            cursor: default;
             width: 60px;
             min-width: 60px;
             font-size: 12px;
             padding: 12px 2px;
             white-space: nowrap;
         }
-        th:first-child {
+        td:first-child {
             position: sticky;
             left: 0;
-            top: 0;
-            z-index: 4;
             background-color: #f1f3f5;
-            cursor: default;
+            font-weight: bold;
+            z-index: 5;
             width: 60px;
             min-width: 60px;
             font-size: 12px;
@@ -189,7 +191,7 @@
             font-weight: bold;
             cursor: pointer;
             padding: 10px;
-            z-index: 0;
+            z-index: 1;
             border: none;
             position: relative;
         }
@@ -200,7 +202,6 @@
             display: none;
             background-color: #fafbfc;
         }
-        /* 修复底部蓝条宽度，让它跟随表格整体宽度（min-width: 600px），左右滑动绝不断开 */
         .table-footer-bar {
             background-color: var(--primary-color);
             color: rgba(255,255,255,0.7);
@@ -208,7 +209,7 @@
             padding: 15px;
             font-size: 12px;
             letter-spacing: 1px;
-            min-width: 600px; 
+            min-width: 600px;
             width: 100%;
         }
         .save-indicator {
@@ -251,7 +252,6 @@
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
         </table>
-        <!-- 完美的自适应底部蓝条 -->
         <div class="table-footer-bar">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</div>
     </div>
 
