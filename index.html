@@ -200,7 +200,7 @@
             display: none;
             background-color: #fafbfc;
         }
-        /* 表格底部的美观收尾深蓝色条 */
+        /* 修复底部蓝条宽度，让它跟随表格整体宽度（min-width: 600px），左右滑动绝不断开 */
         .table-footer-bar {
             background-color: var(--primary-color);
             color: rgba(255,255,255,0.7);
@@ -208,6 +208,8 @@
             padding: 15px;
             font-size: 12px;
             letter-spacing: 1px;
+            min-width: 600px; 
+            width: 100%;
         }
         .save-indicator {
             position: fixed;
@@ -249,7 +251,7 @@
             <thead id="tableHead"></thead>
             <tbody id="tableBody"></tbody>
         </table>
-        <!-- 底部深蓝色收尾条 -->
+        <!-- 完美的自适应底部蓝条 -->
         <div class="table-footer-bar">PISCES HAIR STUDIO • ALL RIGHTS RESERVED</div>
     </div>
 
