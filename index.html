@@ -21,6 +21,10 @@
             padding: 0;
             background-color: var(--bg-color);
             color: #333;
+            /* 解决 iOS 无法缩小的问题：整体以 90% 比例舒适呈现，视野更开阔 */
+            transform: scale(0.9);
+            transform-origin: top left;
+            width: 111.1%;
         }
         .header {
             background-color: var(--primary-color);
@@ -220,9 +224,6 @@
     <div id="saveIndicator" class="save-indicator">已自动同步云端</div>
 
     <script>
-        // ====================================================
-        // 请在此处保留你自己的 Firebase 配置信息
-        // ====================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCSvU7E7oAHdgnXfqf4t-WRS6xYgdkr0I",
             authDomain: "pisces-appointment-system.firebaseapp.com",
