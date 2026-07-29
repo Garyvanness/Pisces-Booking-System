@@ -119,23 +119,21 @@
         th:hover {
             background-color: #f1f3f5;
         }
-        td:first-child {
+        td:first-child, th:first-child {
             position: sticky;
             left: 0;
             background-color: #f1f3f5;
             font-weight: bold;
             z-index: 1;
-            width: 70px;
-            min-width: 70px;
+            width: 60px;
+            min-width: 60px;
+            font-size: 12px;
+            padding: 12px 2px;
+            white-space: nowrap;
         }
         th:first-child {
-            position: sticky;
-            left: 0;
             z-index: 3;
-            background-color: #f1f3f5;
             cursor: default;
-            width: 70px;
-            min-width: 70px;
         }
         td {
             background-color: #fff;
@@ -159,7 +157,7 @@
         td[contenteditable="true"]:empty:before {
             content: attr(data-placeholder);
             color: #ced4da;
-            font-size: 12px;
+            font-size: 11px;
             display: block;
         }
         td[contenteditable="true"]:focus:before {
@@ -323,7 +321,7 @@
         let showLateHours = false;
         let currentListener = null;
         let leaveStatusData = {};
-        let cachedAppointments = {}; // 本地暂存预约数据
+        let cachedAppointments = {};
 
         function init() {
             document.title = t.docTitle;
@@ -443,7 +441,6 @@
             const newStatus = !currentStatus;
 
             if (db) {
-                // 仅改变休假状态，完全不碰 appointments，内容完美保留
                 db.ref(`data/${currentDate}/leaves/${safeStaff}`).set(newStatus);
             } else {
                 leaveStatusData[safeStaff] = newStatus;
@@ -496,7 +493,6 @@
                 if (isOnLeave) {
                     td.className = "on-leave-cell";
                     td.contentEditable = "false";
-                    // 即使在休假状态下，也把原有的预约文字塞进去显示（灰显/只读状态）
                     td.innerText = cachedAppointments[`${safeTime}_${safeStaff}`] || '';
                 } else {
                     td.className = "";
