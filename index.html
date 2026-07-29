@@ -113,6 +113,11 @@
             top: 0;
             z-index: 2;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover {
+            background-color: #f1f3f5;
         }
         td:first-child {
             position: sticky;
@@ -128,13 +133,21 @@
             left: 0;
             z-index: 3;
             background-color: #f1f3f5;
-            width: 65px;
-            min-width: 65px;
+            cursor: default;
         }
         td {
             background-color: #fff;
             cursor: text;
             font-size: 14px;
+        }
+        td.on-leave-cell {
+            background-color: #fadbd8 !important;
+            color: #78281f;
+            cursor: not-allowed;
+        }
+        th.on-leave-header {
+            background-color: #f5b7b1 !important;
+            color: #78281f;
         }
         td:focus {
             outline: 2px solid #3498db;
@@ -181,11 +194,6 @@
             pointer-events: none;
             z-index: 100;
         }
-        .sync-status {
-            font-size: 11px;
-            color: #2ec4b6;
-            margin-left: 5px;
-        }
     </style>
 </head>
 <body>
@@ -213,7 +221,7 @@
 
     <script>
         // ====================================================
-        // 1. 在这里替换为你自己的 Firebase 配置配置信息
+        // 请在此处保留你自己的 Firebase 配置信息
         // ====================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCSvU7E7oAHdgnXfqf4t-WRS6xYgdkr0I",
@@ -225,7 +233,6 @@
             appId: "1:984025840984:web:a7e69f9afa23c22911b92d"
         };
 
-        // 初始化 Firebase
         let db = null;
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -248,7 +255,8 @@
                 hideLate: "▲ 收起晚间时段 (8:00 PM - 3:00 AM) ▲",
                 staffPrompt: "请输入理发师名字（请用逗号 , 分开）：",
                 days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
-                placeholder: "点击输入"
+                placeholder: "点击输入",
+                leaveStatus: " [休假]"
             },
             en: {
                 docTitle: "Salon Appointment System",
@@ -261,7 +269,8 @@
                 hideLate: "▲ Hide Late Hours (8:00 PM - 3:00 AM) ▲",
                 staffPrompt: "Enter staff names (separated by commas ,):",
                 days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-                placeholder: "Tap to type"
+                placeholder: "Tap to type",
+                leaveStatus: " [OFF]"
             },
             ms: {
                 docTitle: "Sistem Temujanji Salun",
@@ -274,7 +283,8 @@
                 hideLate: "▲ Sembunyi Syif Malam (8:00 PM - 3:00 AM) ▲",
                 staffPrompt: "Masukkan nama staf (pisahkan dengan koma ,):",
                 days: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
-                placeholder: "Tekan & Taip"
+                placeholder: "Tekan & Taip",
+                leaveStatus: " [Cuti]"
             }
         };
 
@@ -304,6 +314,7 @@
         let currentDate = new Date().toISOString().split('T')[0];
         let showLateHours = false;
         let currentListener = null;
+        let leaveStatusData = {}; // 存储当前日期各员工的休假状态
 
         function init() {
             document.title = t.docTitle;
@@ -315,7 +326,6 @@
             document.getElementById('datePicker').value = currentDate;
             updateDayOfWeek();
 
-            // 监听团队理发师名单
             if (db) {
                 db.ref('config/staffs').on('value', (snapshot) => {
                     if (snapshot.exists()) {
@@ -323,13 +333,11 @@
                     } else {
                         staffs = defaultStaffs;
                     }
-                    renderTable();
-                    bindRealtimeAppointments();
+                    bindRealtimeData();
                 });
             } else {
                 staffs = JSON.parse(localStorage.getItem('salonStaffs')) || defaultStaffs;
-                renderTable();
-                loadLocalAppointments();
+                bindRealtimeData();
             }
         }
 
@@ -345,17 +353,13 @@
             currentDate = date.toISOString().split('T')[0];
             document.getElementById('datePicker').value = currentDate;
             updateDayOfWeek();
-            renderTable();
-            if (db) bindRealtimeAppointments();
-            else loadLocalAppointments();
+            bindRealtimeData();
         }
 
         function loadDate() {
             currentDate = document.getElementById('datePicker').value;
             updateDayOfWeek();
-            renderTable();
-            if (db) bindRealtimeAppointments();
-            else loadLocalAppointments();
+            bindRealtimeData();
         }
 
         function showSaveIndicator() {
@@ -376,7 +380,7 @@
                     db.ref('config/staffs').set(staffs);
                 } else {
                     localStorage.setItem('salonStaffs', JSON.stringify(staffs));
-                    renderTable();
+                    bindRealtimeData();
                 }
             }
         }
@@ -385,18 +389,25 @@
             return key.replace(/[\.\#\$\[\]\/]/g, "_");
         }
 
-        // Firebase 实时监听：一旦有人更改数据，全员屏幕瞬间变动！
-        function bindRealtimeAppointments() {
-            if (!db) return;
-            
-            if (currentListener) {
-                db.ref('appointments/' + currentDate).off('value', currentListener);
+        // 统一监听当前日期的预约数据及休假状态
+        function bindRealtimeData() {
+            if (!db) {
+                renderTable();
+                return;
             }
 
-            currentListener = db.ref('appointments/' + currentDate).on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                
-                // 遍历表格中的单元格更新界面
+            if (currentListener) {
+                db.ref('data/' + currentDate).off('value', currentListener);
+            }
+
+            currentListener = db.ref('data/' + currentDate).on('value', (snapshot) => {
+                const dayData = snapshot.val() || {};
+                leaveStatusData = dayData.leaves || {};
+                const appointments = dayData.appointments || {};
+
+                renderTable();
+
+                // 填充预约数据
                 staffs.forEach(staff => {
                     const safeStaff = sanitizeKey(staff);
                     [...regularTimes, ...lateTimes].forEach(time => {
@@ -404,46 +415,53 @@
                         const cellId = `cell_${safeTime}_${safeStaff}`;
                         const cell = document.getElementById(cellId);
                         if (cell && document.activeElement !== cell) {
-                            cell.innerText = data[`${safeTime}_${safeStaff}`] || '';
+                            cell.innerText = appointments[`${safeTime}_${safeStaff}`] || '';
                         }
                     });
                 });
             });
         }
 
-        function loadLocalAppointments() {
-            staffs.forEach(staff => {
-                const safeStaff = sanitizeKey(staff);
-                [...regularTimes, ...lateTimes].forEach(time => {
-                    const safeTime = sanitizeKey(time);
-                    const cellId = `cell_${safeTime}_${safeStaff}`;
-                    const cell = document.getElementById(cellId);
-                    if (cell) {
-                        let storageKey = `appt_${currentDate}_${time}_${staff}`;
-                        cell.innerText = localStorage.getItem(storageKey) || '';
-                    }
-                });
-            });
+        // 切换某个员工的休假状态
+        function toggleStaffLeave(staff) {
+            const safeStaff = sanitizeKey(staff);
+            const currentStatus = leaveStatusData[safeStaff] || false;
+            const newStatus = !currentStatus;
+
+            if (db) {
+                db.ref(`data/${currentDate}/leaves/${safeStaff}`).set(newStatus);
+                // 如果设为休假，同时清空该员工当天的所有预约
+                if (newStatus) {
+                    db.ref(`data/${currentDate}/appointments`).transaction((currentAppts) => {
+                        if (!currentAppts) return currentAppts;
+                        [...regularTimes, ...lateTimes].forEach(time => {
+                            const safeTime = sanitizeKey(time);
+                            delete currentAppts[`${safeTime}_${safeStaff}`];
+                        });
+                        return currentAppts;
+                    });
+                }
+            } else {
+                leaveStatusData[safeStaff] = newStatus;
+                renderTable();
+            }
+            showSaveIndicator();
         }
 
         function saveAppointment(time, staff, value) {
             const safeStaff = sanitizeKey(staff);
+            // 如果该员工当天在休假，直接拦截不给保存
+            if (leaveStatusData[safeStaff]) return;
+
             const safeTime = sanitizeKey(time);
             const val = value.trim();
 
             if (db) {
-                const itemRef = db.ref(`appointments/${currentDate}/${safeTime}_${safeStaff}`);
+                const itemRef = db.ref(`data/${currentDate}/appointments/${safeTime}_${safeStaff}`);
                 if (val !== '') {
                     itemRef.set(val);
                 } else {
                     itemRef.remove();
-                }
-            } else {
-                let storageKey = `appt_${currentDate}_${time}_${staff}`;
-                if (val !== '') {
-                    localStorage.setItem(storageKey, val);
-                } else {
-                    localStorage.removeItem(storageKey);
                 }
             }
             showSaveIndicator();
@@ -470,8 +488,16 @@
                 const safeStaff = sanitizeKey(staff);
                 const safeTime = sanitizeKey(time);
                 td.id = `cell_${safeTime}_${safeStaff}`;
-                td.contentEditable = "true";
-                td.setAttribute("data-placeholder", t.placeholder);
+                
+                const isOnLeave = leaveStatusData[safeStaff] || false;
+                if (isOnLeave) {
+                    td.className = "on-leave-cell";
+                    td.contentEditable = "false";
+                    td.innerText = ""; // 休假期间清空内容
+                } else {
+                    td.contentEditable = "true";
+                    td.setAttribute("data-placeholder", t.placeholder);
+                }
                 
                 td.onblur = function() {
                     saveAppointment(time, staff, td.innerText);
@@ -493,7 +519,21 @@
             
             staffs.forEach(staff => {
                 let th = document.createElement('th');
-                th.innerText = staff;
+                const safeStaff = sanitizeKey(staff);
+                const isOnLeave = leaveStatusData[safeStaff] || false;
+                
+                if (isOnLeave) {
+                    th.className = "on-leave-header";
+                    th.innerText = staff + t.leaveStatus;
+                } else {
+                    th.innerText = staff;
+                }
+
+                // 点击表头名字直接切换休假状态
+                th.onclick = function() {
+                    toggleStaffLeave(staff);
+                };
+
                 trHead.appendChild(th);
             });
             thead.appendChild(trHead);
