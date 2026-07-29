@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发廊专属预约系统 - Firebase实时云端版</title>
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --accent-color: #d35400;
+            --night-color: #34495e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: #333;
+        }
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+            justify-content: center;
+        }
+        .header button {
+            background-color: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .header button:active {
+            background-color: rgba(255,255,255,0.4);
+        }
+        .btn-settings {
+            background-color: var(--accent-color) !important;
+            font-weight: bold;
+        }
+        .date-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,0,0,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        input[type="date"] {
+            padding: 6px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            outline: none;
+            background: transparent;
+            color: white;
+            color-scheme: dark;
+        }
+        #dayOfWeek {
+            font-size: 16px;
+            font-weight: bold;
+            color: #f1c40f;
+            white-space: nowrap;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            height: calc(100vh - 80px);
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 600px;
+        }
+        th, td {
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 8px;
+            text-align: center;
+            vertical-align: top;
+            min-width: 100px;
+        }
+        th {
+            background-color: #fff;
+            color: var(--primary-color);
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #f1f3f5;
+            font-weight: bold;
+            z-index: 1;
+            width: 85px;
+            min-width: 85px;
+        }
+        th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 3;
+            background-color: #f1f3f5;
+        }
+        td {
+            background-color: #fff;
+            cursor: text;
+            font-size: 14px;
+        }
+        td:focus {
+            outline: 2px solid #3498db;
+            outline-offset: -2px;
+            background-color: #e8f4f8;
+        }
+        td[contenteditable="true"]:empty:before {
+            content: attr(data-placeholder);
+            color: #ced4da;
+            font-size: 12px;
+            display: block;
+        }
+        td[contenteditable="true"]:focus:before {
+            content: "";
+        }
+        .toggle-row td {
+            background-color: var(--night-color) !important;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 10px;
+            z-index: 0;
+            border: none;
+            position: relative;
+        }
+        .toggle-row td:hover {
+            background-color: #2c3e50 !important;
+        }
+        .late-hour-row {
+            display: none;
+            background-color: #fafbfc;
+        }
+        .save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .sync-status {
+            font-size: 11px;
+            color: #2ec4b6;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <button class="btn-settings" id="btnEditStaff" onclick="editStaff()">⚙️ 更改理发师</button>
+        <div class="header-controls">
+            <button id="btnPrevDay" onclick="changeDate(-1)">◀ 前一天</button>
+            <div class="date-picker-container">
+                <input type="date" id="datePicker" onchange="loadDate()">
+                <span id="dayOfWeek"></span>
+            </div>
+            <button id="btnNextDay" onclick="changeDate(1)">后一天 ▶</button>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="scheduleTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="saveIndicator" class="save-indicator">已自动同步云端</div>
+
+    <script>
+        // ====================================================
+        // 1. 在这里替换为你自己的 Firebase 配置配置信息
+        // ====================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCSvU7E7oAHdgnXfqf4t-WRS6xYgdkr0I",
+            authDomain: "pisces-appointment-system.firebaseapp.com",
+            databaseURL: "https://pisces-appointment-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "pisces-appointment-system",
+            storageBucket: "pisces-appointment-system.firebasestorage.app",
+            messagingSenderId: "984025840984",
+            appId: "1:984025840984:web:a7e69f9afa23c22911b92d"
+        };
+
+        // 初始化 Firebase
+        let db = null;
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+            }
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+        }
+
+        const i18n = {
+            zh: {
+                docTitle: "发廊专属预约系统",
+                editStaff: "⚙️ 更改理发师",
+                prevDay: "◀ 前一天",
+                nextDay: "后一天 ▶",
+                timeCol: "Time",
+                saveMsg: "已实时同步云端 ☁️",
+                showLate: "▼ 展开晚间时段 (8:00 PM - 3:00 AM) ▼",
+                hideLate: "▲ 收起晚间时段 (8:00 PM - 3:00 AM) ▲",
+                staffPrompt: "请输入理发师名字（请用逗号 , 分开）：",
+                days: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
+                placeholder: "点击输入"
+            },
+            en: {
+                docTitle: "Salon Appointment System",
+                editStaff: "⚙️ Edit Staff",
+                prevDay: "◀ Prev",
+                nextDay: "Next ▶",
+                timeCol: "Time",
+                saveMsg: "Synced to Cloud ☁️",
+                showLate: "▼ Show Late Hours (8:00 PM - 3:00 AM) ▼",
+                hideLate: "▲ Hide Late Hours (8:00 PM - 3:00 AM) ▲",
+                staffPrompt: "Enter staff names (separated by commas ,):",
+                days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+                placeholder: "Tap to type"
+            },
+            ms: {
+                docTitle: "Sistem Temujanji Salun",
+                editStaff: "⚙️ Tukar Staf",
+                prevDay: "◀ Sebelum",
+                nextDay: "Seterusnya ▶",
+                timeCol: "Masa",
+                saveMsg: "Telah Disimpan di Awan ☁️",
+                showLate: "▼ Tunjuk Syif Malam (8:00 PM - 3:00 AM) ▼",
+                hideLate: "▲ Sembunyi Syif Malam (8:00 PM - 3:00 AM) ▲",
+                staffPrompt: "Masukkan nama staf (pisahkan dengan koma ,):",
+                days: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"],
+                placeholder: "Tekan & Taip"
+            }
+        };
+
+        let userLang = navigator.language || navigator.userLanguage;
+        let langCode = 'en';
+        if (userLang.toLowerCase().includes('zh')) {
+            langCode = 'zh';
+        } else if (userLang.toLowerCase().includes('ms')) {
+            langCode = 'ms';
+        }
+        const t = i18n[langCode];
+
+        const regularTimes = [
+            "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", 
+            "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", 
+            "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM"
+        ];
+        
+        const lateTimes = [
+            "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM", 
+            "11:00 PM", "11:30 PM", "12:00 AM", "12:30 AM", "1:00 AM", "1:30 AM", 
+            "2:00 AM", "2:30 AM", "3:00 AM"
+        ];
+        
+        let defaultStaffs = ["Gary", "Elvin", "Winnie", "Aries", "Yuna", "Walk In"];
+        let staffs = defaultStaffs;
+        let currentDate = new Date().toISOString().split('T')[0];
+        let showLateHours = false;
+        let currentListener = null;
+
+        function init() {
+            document.title = t.docTitle;
+            document.getElementById('btnEditStaff').innerText = t.editStaff;
+            document.getElementById('btnPrevDay').innerText = t.prevDay;
+            document.getElementById('btnNextDay').innerText = t.nextDay;
+            document.getElementById('saveIndicator').innerText = t.saveMsg;
+            
+            document.getElementById('datePicker').value = currentDate;
+            updateDayOfWeek();
+
+            // 监听团队理发师名单
+            if (db) {
+                db.ref('config/staffs').on('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        staffs = snapshot.val();
+                    } else {
+                        staffs = defaultStaffs;
+                    }
+                    renderTable();
+                    bindRealtimeAppointments();
+                });
+            } else {
+                staffs = JSON.parse(localStorage.getItem('salonStaffs')) || defaultStaffs;
+                renderTable();
+                loadLocalAppointments();
+            }
+        }
+
+        function updateDayOfWeek() {
+            let [y, m, d] = document.getElementById('datePicker').value.split('-');
+            let dateObj = new Date(y, m - 1, d);
+            document.getElementById('dayOfWeek').innerText = t.days[dateObj.getDay()];
+        }
+
+        function changeDate(days) {
+            let date = new Date(document.getElementById('datePicker').value);
+            date.setDate(date.getDate() + days);
+            currentDate = date.toISOString().split('T')[0];
+            document.getElementById('datePicker').value = currentDate;
+            updateDayOfWeek();
+            renderTable();
+            if (db) bindRealtimeAppointments();
+            else loadLocalAppointments();
+        }
+
+        function loadDate() {
+            currentDate = document.getElementById('datePicker').value;
+            updateDayOfWeek();
+            renderTable();
+            if (db) bindRealtimeAppointments();
+            else loadLocalAppointments();
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.style.opacity = '1';
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+            }, 1500);
+        }
+
+        function editStaff() {
+            let currentStaffs = staffs.join(" , ");
+            let newStaffs = prompt(t.staffPrompt, currentStaffs);
+            
+            if (newStaffs !== null && newStaffs.trim() !== "") {
+                staffs = newStaffs.split(/[，,]/).map(s => s.trim()).filter(s => s !== "");
+                if (db) {
+                    db.ref('config/staffs').set(staffs);
+                } else {
+                    localStorage.setItem('salonStaffs', JSON.stringify(staffs));
+                    renderTable();
+                }
+            }
+        }
+
+        function sanitizeKey(key) {
+            return key.replace(/[\.\#\$\[\]\/]/g, "_");
+        }
+
+        // Firebase 实时监听：一旦有人更改数据，全员屏幕瞬间变动！
+        function bindRealtimeAppointments() {
+            if (!db) return;
+            
+            if (currentListener) {
+                db.ref('appointments/' + currentDate).off('value', currentListener);
+            }
+
+            currentListener = db.ref('appointments/' + currentDate).on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                
+                // 遍历表格中的单元格更新界面
+                staffs.forEach(staff => {
+                    const safeStaff = sanitizeKey(staff);
+                    [...regularTimes, ...lateTimes].forEach(time => {
+                        const safeTime = sanitizeKey(time);
+                        const cellId = `cell_${safeTime}_${safeStaff}`;
+                        const cell = document.getElementById(cellId);
+                        if (cell && document.activeElement !== cell) {
+                            cell.innerText = data[`${safeTime}_${safeStaff}`] || '';
+                        }
+                    });
+                });
+            });
+        }
+
+        function loadLocalAppointments() {
+            staffs.forEach(staff => {
+                const safeStaff = sanitizeKey(staff);
+                [...regularTimes, ...lateTimes].forEach(time => {
+                    const safeTime = sanitizeKey(time);
+                    const cellId = `cell_${safeTime}_${safeStaff}`;
+                    const cell = document.getElementById(cellId);
+                    if (cell) {
+                        let storageKey = `appt_${currentDate}_${time}_${staff}`;
+                        cell.innerText = localStorage.getItem(storageKey) || '';
+                    }
+                });
+            });
+        }
+
+        function saveAppointment(time, staff, value) {
+            const safeStaff = sanitizeKey(staff);
+            const safeTime = sanitizeKey(time);
+            const val = value.trim();
+
+            if (db) {
+                const itemRef = db.ref(`appointments/${currentDate}/${safeTime}_${safeStaff}`);
+                if (val !== '') {
+                    itemRef.set(val);
+                } else {
+                    itemRef.remove();
+                }
+            } else {
+                let storageKey = `appt_${currentDate}_${time}_${staff}`;
+                if (val !== '') {
+                    localStorage.setItem(storageKey, val);
+                } else {
+                    localStorage.removeItem(storageKey);
+                }
+            }
+            showSaveIndicator();
+        }
+
+        function toggleLateHours() {
+            showLateHours = !showLateHours;
+            const rows = document.querySelectorAll('.late-hour-row');
+            const btn = document.getElementById('toggleLateBtn');
+            rows.forEach(r => r.style.display = showLateHours ? 'table-row' : 'none');
+            btn.innerText = showLateHours ? t.hideLate : t.showLate;
+        }
+
+        function createTimeRow(time, isLate) {
+            let tr = document.createElement('tr');
+            if (isLate) tr.className = 'late-hour-row';
+            
+            let tdTime = document.createElement('td');
+            tdTime.innerText = time;
+            tr.appendChild(tdTime);
+
+            staffs.forEach(staff => {
+                let td = document.createElement('td');
+                const safeStaff = sanitizeKey(staff);
+                const safeTime = sanitizeKey(time);
+                td.id = `cell_${safeTime}_${safeStaff}`;
+                td.contentEditable = "true";
+                td.setAttribute("data-placeholder", t.placeholder);
+                
+                td.onblur = function() {
+                    saveAppointment(time, staff, td.innerText);
+                };
+                
+                tr.appendChild(td);
+            });
+            return tr;
+        }
+
+        function renderTable() {
+            const thead = document.getElementById('tableHead');
+            thead.innerHTML = '';
+            let trHead = document.createElement('tr');
+            
+            let thTime = document.createElement('th');
+            thTime.innerText = t.timeCol;
+            trHead.appendChild(thTime);
+            
+            staffs.forEach(staff => {
+                let th = document.createElement('th');
+                th.innerText = staff;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            regularTimes.forEach(time => {
+                tbody.appendChild(createTimeRow(time, false));
+            });
+            
+            let trToggle = document.createElement('tr');
+            trToggle.className = 'toggle-row';
+            let tdToggle = document.createElement('td');
+            tdToggle.colSpan = staffs.length + 1;
+            tdToggle.id = 'toggleLateBtn';
+            tdToggle.innerText = showLateHours ? t.hideLate : t.showLate;
+            tdToggle.onclick = toggleLateHours;
+            trToggle.appendChild(tdToggle);
+            tbody.appendChild(trToggle);
+            
+            lateTimes.forEach(time => {
+                let tr = createTimeRow(time, true);
+                tr.style.display = showLateHours ? 'table-row' : 'none';
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
